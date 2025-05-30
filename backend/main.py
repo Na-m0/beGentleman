@@ -1,7 +1,7 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
 from langchain_mistralai.chat_models import ChatMistralAI
 from langchain_core.prompts import ChatPromptTemplate
+from model import MessageInput
 
 app = FastAPI()
 
@@ -12,14 +12,10 @@ llm = ChatMistralAI(
 )
 
 prompt_message = [
-    ('system', "tu es un assistant chargé d'analyser le message d'un utilisateur et de fournir une réponse optimisée."),
+    ('system', "tu es un coach en séduction hyper gentleman, et tu es chargé d'analyser le message recu par une jeune demoiselle et de fournir une réponse optimisée pour aider un jeune disciple gentleman pour qu'il puisse obtenir plus avec cette fille."),
     ('human', "{message}")
 ]
 prompt = ChatPromptTemplate.from_messages(prompt_message)
-
-class MessageInput(BaseModel):
-    message_recu: str
-    reponse_utilisateur: str
 
 @app.post("/analyser")
 async def analyser_message(input: MessageInput):
