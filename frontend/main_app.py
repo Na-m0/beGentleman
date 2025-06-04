@@ -5,17 +5,16 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QPixmap, QFont, QMovie
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSize
-
 import requests
 
 
 class MessageBubble(QWidget):
     def __init__(self, text, avatar_path=None, is_user=False):
         super().__init__()
-
         layout = QHBoxLayout()
         bubble = QLabel(text)
         bubble.setWordWrap(True)
+
         if is_user:
             bubble.setStyleSheet("""
                 background-color: #d32f2f;
@@ -25,6 +24,7 @@ class MessageBubble(QWidget):
             """)
         else:
             bubble.setStyleSheet("""
+                background-color: #444;
                 color: white;
                 padding: 10px;
                 border-radius: 10px;
@@ -62,7 +62,7 @@ class AccueilWindow(QWidget):
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         image = QLabel()
-        pixmap = QPixmap("logo.png")  # Ton image de cravate
+        pixmap = QPixmap("logo.png")
         image.setPixmap(pixmap.scaledToHeight(350, Qt.TransformationMode.SmoothTransformation))
         image.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
@@ -81,10 +81,8 @@ class AccueilWindow(QWidget):
             }
         """)
         button.setCursor(Qt.CursorShape.PointingHandCursor)
-
         button.clicked.connect(self.switch_callback)
 
-        # Centrer le bouton
         button_wrapper = QHBoxLayout()
         button_wrapper.addStretch()
         button_wrapper.addWidget(button)
@@ -92,7 +90,6 @@ class AccueilWindow(QWidget):
 
         layout.addWidget(image)
         layout.addLayout(button_wrapper)
-
         self.setLayout(layout)
 
 
@@ -100,12 +97,13 @@ class AnalyseThread(QThread):
     result_ready = pyqtSignal(str)
     error_occurred = pyqtSignal(str)
 
-    def __init__(self, msg, rep, faire_reponse=False, analyse_complete=False):
+    def __init__(self, msg, rep, faire_reponse=False, analyse_complete=False, contexte=""):
         super().__init__()
         self.msg = msg
         self.rep = rep
         self.faire_reponse = faire_reponse
         self.analyse_complete = analyse_complete
+        self.contexte = contexte
 
     def run(self):
         try:
@@ -114,6 +112,8 @@ class AnalyseThread(QThread):
                 prompt_extras += "\n\nTu dois absolument faire une analyse complète du message de la fille."
             if self.faire_reponse:
                 prompt_extras += "\n\nEt propose une réponse gentleman à envoyer."
+            if self.contexte.strip():
+                prompt_extras += f"\n\nContexte supplémentaire : {self.contexte.strip()}"
 
             full_text = f"Message reçu : {self.msg}\nRéponse proposée : {self.rep}{prompt_extras}"
 
@@ -130,7 +130,6 @@ class AnalyseThread(QThread):
                 self.error_occurred.emit(f"Erreur {r.status_code}")
         except Exception as e:
             self.error_occurred.emit(str(e))
-
 
 
 class AnalyseWindow(QWidget):
@@ -152,9 +151,10 @@ class AnalyseWindow(QWidget):
         self.chat_layout.addWidget(MessageBubble("Bonjour jeune homme, comment puis-je vous aider aujourd'hui ?", avatar_path="logo.png"))
         self.chat_layout.addWidget(MessageBubble("J’aurais besoin d’aide pour une fille…..", avatar_path="avatar.png", is_user=True))
 
-        input_layout = QHBoxLayout()
+        input_layout = QVBoxLayout()
+
         self.message_input = QLineEdit()
-        self.message_input.setPlaceholderText("Décrire votre situation")
+        self.message_input.setPlaceholderText("Décrire votre situation (message reçu)")
         self.message_input.setStyleSheet("""
             background-color: #444;
             border: none;
@@ -163,6 +163,17 @@ class AnalyseWindow(QWidget):
             color: white;
         """)
         input_layout.addWidget(self.message_input)
+
+        self.context_input = QLineEdit()
+        self.context_input.setPlaceholderText("Ajouter un contexte (optionnel)")
+        self.context_input.setStyleSheet("""
+            background-color: #444;
+            border: none;
+            border-radius: 10px;
+            padding: 10px;
+            color: white;
+        """)
+        input_layout.addWidget(self.context_input)
 
         option_layout = QHBoxLayout()
         self.btn_add = QPushButton("Ajouter un message")
@@ -182,7 +193,6 @@ class AnalyseWindow(QWidget):
         option_layout.addWidget(self.checkbox_msg)
         option_layout.addWidget(self.checkbox_analyse)
 
-        # Loader animé
         self.loader = QLabel()
         self.loader.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.loader.setVisible(False)
@@ -198,16 +208,16 @@ class AnalyseWindow(QWidget):
 
     def demarrer_analyse(self):
         msg = self.message_input.text().strip()
-        rep = "Réponse fictive"  # Optionnel, tu peux plus tard ajouter un champ pour la réponse utilisateur
+        contexte = self.context_input.text().strip()
+        rep = "Réponse fictive"
 
         if not msg:
             return
 
-        # Afficher le message utilisateur
         self.chat_layout.addWidget(MessageBubble(msg, avatar_path="avatar.png", is_user=True))
         self.message_input.clear()
+        self.context_input.clear()
 
-        # Bulle de chargement
         self.loader_msg = QLabel()
         self.loader_msg.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.loader_gif = QMovie("lg.gif")
@@ -216,12 +226,10 @@ class AnalyseWindow(QWidget):
         self.loader_gif.start()
         self.chat_layout.addWidget(self.loader_msg)
 
-        # Lire l'état des checkbox
         faire_reponse = self.checkbox_msg.isChecked()
         analyse_complete = self.checkbox_analyse.isChecked()
 
-        # Lancer le thread
-        self.thread = AnalyseThread(msg, rep, faire_reponse, analyse_complete)
+        self.thread = AnalyseThread(msg, rep, faire_reponse, analyse_complete, contexte)
         self.thread.result_ready.connect(self.afficher_resultat)
         self.thread.error_occurred.connect(self.afficher_erreur)
         self.thread.start()
@@ -230,14 +238,12 @@ class AnalyseWindow(QWidget):
         self.chat_layout.removeWidget(self.loader_msg)
         self.loader_msg.setParent(None)
         self.loader_gif.stop()
-
         self.chat_layout.addWidget(MessageBubble(texte, avatar_path="logo.png"))
 
     def afficher_erreur(self, erreur):
         self.chat_layout.removeWidget(self.loader_msg)
         self.loader_msg.setParent(None)
         self.loader_gif.stop()
-
         self.chat_layout.addWidget(MessageBubble(f"❌ Erreur : {erreur}", is_user=False))
 
 
@@ -249,7 +255,6 @@ class MainWindow(QMainWindow):
 
         self.accueil = AccueilWindow(self.afficher_analyse)
         self.analyse = AnalyseWindow()
-
         self.setCentralWidget(self.accueil)
 
     def afficher_analyse(self):

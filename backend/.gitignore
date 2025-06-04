@@ -12,3 +12,6 @@ __pycache__/
 
 # Facultatif : ignorer les logs ou fichiers temporaires
 *.log
+
+
+.env

@@ -3,12 +3,13 @@ from langchain_mistralai.chat_models import ChatMistralAI
 from langchain_core.prompts import ChatPromptTemplate
 from model import MessageInput
 
+
 app = FastAPI()
 
 llm = ChatMistralAI(
     model="mistral-large-latest",
     temperature=0.2,
-    api_key="LS05kJiWyNo61YiAAz0uKIof25UqUec4"
+    api_key="iAFfs0zuweYKv48AIG0yMWDGCRIJlEMR"
 )
 
 prompt_message = [
