@@ -23,12 +23,21 @@ class MessageBubble(QWidget):
                 border-radius: 10px;
             """)
         else:
-            bubble.setStyleSheet("""
-                background-color: #444;
-                color: white;
-                padding: 10px;
-                border-radius: 10px;
-            """)
+            if text.startswith("🔍"):
+                bubble.setStyleSheet("""
+                    background-color: #005f73;
+                    color: white;
+                    padding: 10px;
+                    border-radius: 10px;
+                    font-style: italic;
+                """)
+            else:
+                bubble.setStyleSheet("""
+                    background-color: #444;
+                    color: white;
+                    padding: 10px;
+                    border-radius: 10px;
+                """)
 
         bubble.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
@@ -238,7 +247,23 @@ class AnalyseWindow(QWidget):
         self.chat_layout.removeWidget(self.loader_msg)
         self.loader_msg.setParent(None)
         self.loader_gif.stop()
-        self.chat_layout.addWidget(MessageBubble(texte, avatar_path="logo.png"))
+
+        sections = texte.split("\n\n")
+
+        for section in sections:
+            clean = section.strip().lower()
+            if any(kw in clean for kw in ["réponse", "suggestion", "à envoyer"]):
+                self.chat_layout.addWidget(
+                    MessageBubble(section.strip(), avatar_path="logo.png")
+                )
+            elif any(kw in clean for kw in ["analyse", "interprétation", "explication", "ce que cela signifie"]):
+                self.chat_layout.addWidget(
+                    MessageBubble(f"🔍 {section.strip()}", avatar_path="logo.png")
+                )
+            else:
+                self.chat_layout.addWidget(
+                    MessageBubble(section.strip(), avatar_path="logo.png")
+                )
 
     def afficher_erreur(self, erreur):
         self.chat_layout.removeWidget(self.loader_msg)
