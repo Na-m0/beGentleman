@@ -1,7 +1,3 @@
-pip install streamlit requests
+pip install PyQt6
 
-Pour tout insataller DIRECTEMENT : pip install -r requirements.txt
-
-python -m venv venv
-venv\Scripts\activate
-streamlit run app.py
+pour lancer : python .\main_app.py
