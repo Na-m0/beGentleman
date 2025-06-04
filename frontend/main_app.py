@@ -100,17 +100,28 @@ class AnalyseThread(QThread):
     result_ready = pyqtSignal(str)
     error_occurred = pyqtSignal(str)
 
-    def __init__(self, msg, rep):
+    def __init__(self, msg, rep, faire_reponse=False, analyse_complete=False):
         super().__init__()
         self.msg = msg
         self.rep = rep
+        self.faire_reponse = faire_reponse
+        self.analyse_complete = analyse_complete
 
     def run(self):
         try:
+            prompt_extras = ""
+            if self.analyse_complete:
+                prompt_extras += "\n\nTu dois absolument faire une analyse complète du message de la fille."
+            if self.faire_reponse:
+                prompt_extras += "\n\nEt propose une réponse gentleman à envoyer."
+
+            full_text = f"Message reçu : {self.msg}\nRéponse proposée : {self.rep}{prompt_extras}"
+
             r = requests.post("http://127.0.0.1:8000/analyser", json={
                 "message_recu": self.msg,
-                "reponse_utilisateur": self.rep
+                "reponse_utilisateur": full_text
             })
+
             if r.status_code == 200:
                 analyse = r.json().get("analyse", {})
                 texte = analyse.get("content", str(analyse)) if isinstance(analyse, dict) else str(analyse)
@@ -119,6 +130,7 @@ class AnalyseThread(QThread):
                 self.error_occurred.emit(f"Erreur {r.status_code}")
         except Exception as e:
             self.error_occurred.emit(str(e))
+
 
 
 class AnalyseWindow(QWidget):
@@ -186,16 +198,16 @@ class AnalyseWindow(QWidget):
 
     def demarrer_analyse(self):
         msg = self.message_input.text().strip()
-        rep = "Réponse fictive"  # tu peux plus tard récupérer une vraie réponse utilisateur si tu veux
+        rep = "Réponse fictive"  # Optionnel, tu peux plus tard ajouter un champ pour la réponse utilisateur
 
         if not msg:
             return
 
-        # Affiche ton propre message comme une bulle à droite
+        # Afficher le message utilisateur
         self.chat_layout.addWidget(MessageBubble(msg, avatar_path="avatar.png", is_user=True))
         self.message_input.clear()
 
-        # Ajoute une bulle temporaire pour le loader
+        # Bulle de chargement
         self.loader_msg = QLabel()
         self.loader_msg.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.loader_gif = QMovie("lg.gif")
@@ -204,8 +216,12 @@ class AnalyseWindow(QWidget):
         self.loader_gif.start()
         self.chat_layout.addWidget(self.loader_msg)
 
-        # Lancer le thread d’analyse
-        self.thread = AnalyseThread(msg, rep)
+        # Lire l'état des checkbox
+        faire_reponse = self.checkbox_msg.isChecked()
+        analyse_complete = self.checkbox_analyse.isChecked()
+
+        # Lancer le thread
+        self.thread = AnalyseThread(msg, rep, faire_reponse, analyse_complete)
         self.thread.result_ready.connect(self.afficher_resultat)
         self.thread.error_occurred.connect(self.afficher_erreur)
         self.thread.start()
