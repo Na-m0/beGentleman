@@ -9,7 +9,7 @@ app = FastAPI()
 llm = ChatMistralAI(
     model="mistral-large-latest",
     temperature=0.2,
-    api_key="iAFfs0zuweYKv48AIG0yMWDGCRIJlEMR"
+    api_key="LS05kJiWyNo61YiAAz0uKIof25UqUec4"
 )
 
 prompt_message = [
